@@ -1,0 +1,7 @@
+.idea/
+.codex
+.venv/
+practice/.venv/
+practice/__pycache__/
+practice/definitions*.json
+practice/tls/

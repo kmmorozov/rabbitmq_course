@@ -1,0 +1,20 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+rule_files: [/etc/prometheus/alerts.yml]
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: [alertmanager:9093]
+scrape_configs:
+  - job_name: rabbitmq
+    static_configs:
+      - targets: [rabbit1:15692, rabbit2:15692, rabbit3:15692]
+  - job_name: rabbitmq-queues
+    metrics_path: /metrics/per-object
+    scrape_interval: 30s
+    static_configs:
+      - targets: [rabbit1:15692, rabbit2:15692, rabbit3:15692]
+  - job_name: telegraf
+    static_configs:
+      - targets: [telegraf:9273]

@@ -1,0 +1,4 @@
+services:
+  rabbit1:
+    volumes:
+      - ./advanced.config:/etc/rabbitmq/advanced.config:ro

@@ -1,0 +1,21 @@
+groups:
+  - name: course
+    rules:
+      - alert: RabbitMQEndpointDown
+        expr: up{job="rabbitmq"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "RabbitMQ metrics endpoint is unreachable: {{ $labels.instance }}"
+      - alert: RabbitMQNoConsumers
+        expr: rabbitmq_queue_consumers{job="rabbitmq-queues",queue=~"(app|ha)\\.work"} == 0
+        for: 1m
+        labels: {severity: warning}
+        annotations:
+          summary: "No consumers for {{ $labels.queue }}"
+      - alert: RabbitMQBacklog
+        expr: rabbitmq_queue_messages_ready{job="rabbitmq-queues",queue=~"(app|ha)\\.work"} > 10
+        for: 1m
+        labels: {severity: warning}
+        annotations:
+          summary: "More than 10 ready messages in {{ $labels.queue }}"

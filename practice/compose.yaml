@@ -1,0 +1,92 @@
+name: rabbitmq-course
+
+x-rabbit: &rabbit
+  image: rabbitmq:4.1-management
+  mem_limit: 1536m
+  environment: &environment
+    RABBITMQ_DEFAULT_USER: admin
+    RABBITMQ_DEFAULT_PASS: admin-pass
+    RABBITMQ_DEFAULT_VHOST: /course
+    RABBITMQ_ERLANG_COOKIE: course-local-cookie
+  healthcheck:
+    test: [CMD, rabbitmq-diagnostics, -q, check_running]
+    interval: 10s
+    timeout: 10s
+    retries: 12
+    start_period: 30s
+
+services:
+  rabbit1:
+    <<: *rabbit
+    hostname: rabbit1
+    ports: ["127.0.0.1:5672:5672", "127.0.0.1:15672:15672", "127.0.0.1:15692:15692"]
+    volumes: ["rabbit1-data:/var/lib/rabbitmq", "./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro"]
+  rabbit2:
+    <<: *rabbit
+    profiles: [cluster]
+    hostname: rabbit2
+    ports: ["127.0.0.1:5673:5672", "127.0.0.1:15673:15672"]
+    volumes: ["rabbit2-data:/var/lib/rabbitmq", "./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro"]
+  rabbit3:
+    <<: *rabbit
+    profiles: [cluster]
+    hostname: rabbit3
+    ports: ["127.0.0.1:5674:5672", "127.0.0.1:15674:15672"]
+    volumes: ["rabbit3-data:/var/lib/rabbitmq", "./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro"]
+  haproxy:
+    image: haproxy:3.0-alpine
+    profiles: [cluster]
+    ports: ["127.0.0.1:5670:5672", "127.0.0.1:15670:15672", "127.0.0.1:8404:8404"]
+    volumes: ["./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro"]
+    depends_on:
+      rabbit1: {condition: service_healthy}
+      rabbit2: {condition: service_healthy}
+      rabbit3: {condition: service_healthy}
+  remote:
+    <<: *rabbit
+    profiles: [links]
+    hostname: remote
+    environment:
+      <<: *environment
+      RABBITMQ_ERLANG_COOKIE: remote-separate-cookie
+    ports: ["127.0.0.1:5682:5672", "127.0.0.1:15682:15672"]
+    volumes: ["remote-data:/var/lib/rabbitmq", "./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro"]
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    profiles: [monitoring]
+    ports: ["127.0.0.1:9090:9090"]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    profiles: [monitoring]
+    ports: ["127.0.0.1:9093:9093"]
+    volumes: ["./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro"]
+  telegraf:
+    image: telegraf:1.34-alpine
+    profiles: [monitoring]
+    ports: ["127.0.0.1:9273:9273"]
+    volumes: ["./monitoring/telegraf.conf:/etc/telegraf/telegraf.conf:ro"]
+  grafana:
+    image: grafana/grafana:11.6.0
+    profiles: [monitoring]
+    ports: ["127.0.0.1:3000:3000"]
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: grafana-pass
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/datasource.yml:/etc/grafana/provisioning/datasources/course.yml:ro
+  webhook:
+    image: python:3.12-alpine
+    profiles: [monitoring]
+    command: [python, -u, /app/webhook.py]
+    volumes: ["./webhook.py:/app/webhook.py:ro"]
+
+volumes:
+  rabbit1-data:
+  rabbit2-data:
+  rabbit3-data:
+  remote-data:
+  grafana-data:

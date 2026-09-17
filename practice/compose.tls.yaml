@@ -1,0 +1,17 @@
+services:
+  tls:
+    image: rabbitmq:4.1-management
+    hostname: tls
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin-pass
+      RABBITMQ_DEFAULT_VHOST: /course
+    ports: ["127.0.0.1:5691:5671", "127.0.0.1:15691:15672"]
+    volumes:
+      - tls-data:/var/lib/rabbitmq
+      - ./tls/ca.pem:/etc/rabbitmq/tls/ca.pem:ro
+      - ./tls/server.pem:/etc/rabbitmq/tls/server.pem:ro
+      - ./tls/server.key:/etc/rabbitmq/tls/server.key:ro
+      - ./rabbitmq-tls.conf:/etc/rabbitmq/rabbitmq.conf:ro
+volumes:
+  tls-data:

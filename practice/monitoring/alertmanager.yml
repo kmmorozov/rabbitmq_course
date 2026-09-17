@@ -1,0 +1,11 @@
+route:
+  receiver: local-log
+  group_by: [alertname, queue, instance]
+  group_wait: 10s
+  group_interval: 30s
+  repeat_interval: 15m
+receivers:
+  - name: local-log
+    webhook_configs:
+      - url: http://webhook:8080/alerts
+        send_resolved: true
